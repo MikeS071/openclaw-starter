@@ -18,5 +18,13 @@
 - Edit HEARTBEAT.md with active checks. Keep it small (token cost).
 - Stay quiet: late night (23–08 local time), human busy, nothing new.
 
+## Dev Workflow
+For software projects, follow the BMAD + Karpathy process:
+- See `workflow/sprint-planning.md` for the full process
+- See `workflow/preflight-spec-template.md` for spec format
+- See `workflow/agent-quality-contract.md` for task prompt structure
+- Run `bash workflow/readiness-check.sh` before and after any sprint story
+- Auto-merge to dev when `CONFIDENCE_SCORE ≥ 90`; flag to user otherwise
+
 ## Tools
 - Skills: check SKILL.md for each. Notes in TOOLS.md.
