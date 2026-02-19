@@ -57,8 +57,30 @@ EOF
   chmod 440 /etc/sudoers.d/90-openclaw
 }
 
+wait_for_apt() {
+  log "Waiting for apt lock to be released (cloud-init may be running)..."
+  # Stop unattended-upgrades if running, then wait for lock
+  systemctl stop unattended-upgrades 2>/dev/null || true
+  systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
+  local waited=0
+  while flock --nonblock /var/lib/dpkg/lock-frontend true 2>/dev/null; [ $? -ne 0 ]; do
+    if [ $waited -ge 120 ]; then
+      log "Timed out waiting for apt lock after 120s — proceeding anyway"
+      break
+    fi
+    log "  apt lock held, waiting 5s... (${waited}s elapsed)"
+    sleep 5
+    waited=$((waited + 5))
+  done
+  # Extra safety — wait for dpkg lock too
+  while flock --nonblock /var/lib/dpkg/lock true 2>/dev/null; [ $? -ne 0 ]; do
+    sleep 3
+  done
+}
+
 install_base_deps() {
   log "Installing base dependencies..."
+  wait_for_apt
   apt-get update
   apt-get install -y ca-certificates curl git jq gnupg pass lsb-release software-properties-common
 
