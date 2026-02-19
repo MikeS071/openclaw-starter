@@ -2,7 +2,41 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DEFAULT_WORKSPACE="$HOME/.openclaw/workspace"
+DEFAULT_WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}"
+NON_INTERACTIVE=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --non-interactive)
+      NON_INTERACTIVE=true
+      ;;
+    -h|--help)
+      cat <<'EOF'
+Usage: bash install.sh [--non-interactive]
+
+Options:
+  --non-interactive  Skip prompts and read values from environment variables.
+
+Environment variables used in non-interactive mode:
+  OPENCLAW_WORKSPACE
+  OPENCLAW_USER_NAME
+  OPENCLAW_TIMEZONE
+  OPENCLAW_WORK_EMAIL
+  OPENCLAW_X_HANDLE
+  OPENCLAW_PERSONAL_EMAIL (optional)
+EOF
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $arg"
+      exit 1
+      ;;
+  esac
+done
+
+if [[ "$NON_INTERACTIVE" == false && ! -t 0 ]]; then
+  NON_INTERACTIVE=true
+fi
 
 require_cmd() {
   local cmd="$1"
@@ -91,8 +125,10 @@ configure_api_keys() {
 }
 
 setup_precache() {
-  if ! confirm "Set up Gmail/Calendar pre-cache?"; then
-    return 0
+  if [[ "$NON_INTERACTIVE" == false ]]; then
+    if ! confirm "Set up Gmail/Calendar pre-cache?"; then
+      return 0
+    fi
   fi
 
   mkdir -p "$WORKSPACE_PATH/automation"
@@ -112,12 +148,16 @@ require_cmd git "Install git first."
 require_cmd gpg "Install GnuPG first."
 require_cmd pass "Install pass first."
 
-read -r -p "OpenClaw workspace path [$DEFAULT_WORKSPACE]: " WORKSPACE_PATH
-WORKSPACE_PATH="${WORKSPACE_PATH:-$DEFAULT_WORKSPACE}"
+if [[ "$NON_INTERACTIVE" == true ]]; then
+  WORKSPACE_PATH="$DEFAULT_WORKSPACE"
+else
+  read -r -p "OpenClaw workspace path [$DEFAULT_WORKSPACE]: " WORKSPACE_PATH
+  WORKSPACE_PATH="${WORKSPACE_PATH:-$DEFAULT_WORKSPACE}"
 
-if ! confirm "Use workspace path: $WORKSPACE_PATH?"; then
-  echo "Aborted. Re-run install.sh and enter the correct path."
-  exit 1
+  if ! confirm "Use workspace path: $WORKSPACE_PATH?"; then
+    echo "Aborted. Re-run install.sh and enter the correct path."
+    exit 1
+  fi
 fi
 
 mkdir -p "$WORKSPACE_PATH"
@@ -132,12 +172,21 @@ fi
 echo "Copying template workspace files..."
 cp -a "$REPO_ROOT/workspace"/. "$WORKSPACE_PATH"/
 
-read -r -p "Your name: " NAME
-read -r -p "Preferred name: " PREFERRED_NAME
-read -r -p "Timezone (e.g. Australia/Melbourne): " TIMEZONE
-read -r -p "X/Twitter handle (without @): " X_HANDLE
-read -r -p "Work email: " WORK_EMAIL
-read -r -p "Personal email: " PERSONAL_EMAIL
+if [[ "$NON_INTERACTIVE" == true ]]; then
+  NAME="${OPENCLAW_USER_NAME:-OpenClaw User}"
+  PREFERRED_NAME="${OPENCLAW_USER_NAME:-OpenClaw}"
+  TIMEZONE="${OPENCLAW_TIMEZONE:-UTC}"
+  X_HANDLE="${OPENCLAW_X_HANDLE:-}"
+  WORK_EMAIL="${OPENCLAW_WORK_EMAIL:-}"
+  PERSONAL_EMAIL="${OPENCLAW_PERSONAL_EMAIL:-}"
+else
+  read -r -p "Your name: " NAME
+  read -r -p "Preferred name: " PREFERRED_NAME
+  read -r -p "Timezone (e.g. Australia/Melbourne): " TIMEZONE
+  read -r -p "X/Twitter handle (without @): " X_HANDLE
+  read -r -p "Work email: " WORK_EMAIL
+  read -r -p "Personal email: " PERSONAL_EMAIL
+fi
 
 USER_FILE="$WORKSPACE_PATH/USER.md"
 IDENTITY_FILE="$WORKSPACE_PATH/IDENTITY.md"
@@ -153,7 +202,9 @@ sed -i "s/{{X_HANDLE}}/$(escape_sed "$X_HANDLE")/g" "$USER_FILE"
 sed -i "s/{{AGENT_NAME}}/$(escape_sed "$NAME")/g" "$IDENTITY_FILE" "$MEMORY_FILE"
 sed -i "s/{{DATE}}/$(date -u +%F)/g" "$MEMORY_FILE"
 
-configure_api_keys
+if [[ "$NON_INTERACTIVE" == false ]]; then
+  configure_api_keys
+fi
 setup_precache
 
 chmod +x "$WORKSPACE_PATH/workflow/readiness-check.sh" "$WORKSPACE_PATH/automation/precache-checks.sh" 2>/dev/null || true
