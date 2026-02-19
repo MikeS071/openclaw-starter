@@ -18,6 +18,7 @@ Installs OpenClaw + security hardening + your AI persona + workflow templates. ~
 - Agentic engineering workflow (pre-flight specs, agent quality contract, readiness checks)
 - Gmail/Calendar pre-cache automation scaffolding
 - Weekly self-improvement cron-friendly templates
+- `ocl` management CLI
 
 ## Already Have OpenClaw? (Persona Only)
 
@@ -27,40 +28,53 @@ cd openclaw-starter
 bash install.sh
 ```
 
-## Post-Install
+## Managing Your Installation
+
+After install, use the `ocl` CLI:
 
 ```bash
-cd ~/openclaw-starter
-make status    # check service health
-make logs      # view gateway logs
-make backup    # backup config
-make harden    # restrict SSH to Tailscale only
-make persona   # re-run persona setup wizard
+ocl status     # check gateway health
+ocl logs       # view recent logs
+ocl restart    # restart the gateway
+ocl backup     # backup your config
+ocl update     # update to latest OpenClaw
+ocl harden     # restrict SSH to Tailscale only
+ocl persona    # re-run setup wizard
 ```
 
 ## Local Testing (Docker)
 
 ```bash
 cd docker
-make install
+docker build -t openclaw-starter-test .
 ```
+
+## install.sh flags
+
+```bash
+bash install.sh --non-interactive --skip-keys --dry-run
+```
+
+- `--dry-run`: print what would happen, do not copy files or run setup commands
+- `--skip-keys`: skip API key setup (useful for CI)
 
 ## Structure
 
 ```text
 .
-├── Makefile
+├── .github/
+│   └── workflows/
+│       └── test.yml
+├── bin/
+│   └── ocl
 ├── README.md
 ├── install.sh
 ├── vps-install.sh
-├── server/
-│   └── Makefile
-├── docker/
-│   ├── Dockerfile
-│   └── Makefile
 ├── automation/
 │   ├── README.md
 │   └── precache-checks.sh
+├── docker/
+│   └── Dockerfile
 └── workspace/
     ├── AGENTS.md
     ├── HEARTBEAT.md

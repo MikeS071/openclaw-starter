@@ -4,18 +4,28 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEFAULT_WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}"
 NON_INTERACTIVE=false
+DRY_RUN=false
+SKIP_KEYS=false
 
 for arg in "$@"; do
   case "$arg" in
     --non-interactive)
       NON_INTERACTIVE=true
       ;;
+    --dry-run)
+      DRY_RUN=true
+      ;;
+    --skip-keys)
+      SKIP_KEYS=true
+      ;;
     -h|--help)
       cat <<'EOF'
-Usage: bash install.sh [--non-interactive]
+Usage: bash install.sh [--non-interactive] [--dry-run] [--skip-keys]
 
 Options:
   --non-interactive  Skip prompts and read values from environment variables.
+  --dry-run          Print actions without modifying files or running setup commands.
+  --skip-keys        Skip API key setup.
 
 Environment variables used in non-interactive mode:
   OPENCLAW_WORKSPACE
@@ -56,6 +66,10 @@ confirm() {
   local response
   read -r -p "$prompt [y/N]: " response
   [[ "$response" =~ ^[Yy]$ ]]
+}
+
+dry_run_note() {
+  echo "[dry-run] $*"
 }
 
 ensure_gpg_key() {
@@ -144,9 +158,11 @@ setup_precache() {
   echo "  */15 * * * * OPENCLAW_WORKSPACE=\"$WORKSPACE_PATH\" bash \"$WORKSPACE_PATH/automation/precache-checks.sh\""
 }
 
-require_cmd git "Install git first."
-require_cmd gpg "Install GnuPG first."
-require_cmd pass "Install pass first."
+if [[ "$DRY_RUN" == false ]]; then
+  require_cmd git "Install git first."
+  require_cmd gpg "Install GnuPG first."
+  require_cmd pass "Install pass first."
+fi
 
 if [[ "$NON_INTERACTIVE" == true ]]; then
   WORKSPACE_PATH="$DEFAULT_WORKSPACE"
@@ -159,18 +175,6 @@ else
     exit 1
   fi
 fi
-
-mkdir -p "$WORKSPACE_PATH"
-
-if compgen -G "$WORKSPACE_PATH/*" >/dev/null; then
-  backup_dir="$WORKSPACE_PATH.backup.$(date +%Y%m%d-%H%M%S)"
-  echo "Backing up existing workspace to: $backup_dir"
-  mkdir -p "$backup_dir"
-  cp -a "$WORKSPACE_PATH"/. "$backup_dir"/
-fi
-
-echo "Copying template workspace files..."
-cp -a "$REPO_ROOT/workspace"/. "$WORKSPACE_PATH"/
 
 if [[ "$NON_INTERACTIVE" == true ]]; then
   NAME="${OPENCLAW_USER_NAME:-OpenClaw User}"
@@ -188,6 +192,34 @@ else
   read -r -p "Personal email: " PERSONAL_EMAIL
 fi
 
+if [[ "$DRY_RUN" == true ]]; then
+  dry_run_note "Would create workspace directory: $WORKSPACE_PATH"
+  dry_run_note "Would backup existing files to timestamped backup if workspace is non-empty"
+  dry_run_note "Would copy templates from $REPO_ROOT/workspace to $WORKSPACE_PATH"
+  dry_run_note "Would template USER.md, IDENTITY.md, MEMORY.md, TOOLS.md with provided values"
+  if [[ "$SKIP_KEYS" == true ]]; then
+    dry_run_note "Skipping API key setup (--skip-keys)"
+  else
+    dry_run_note "Would run interactive API key setup"
+  fi
+  dry_run_note "Would set execute permissions for workflow/readiness-check.sh and automation/precache-checks.sh"
+  echo ""
+  echo "Dry run complete. No changes were made."
+  exit 0
+fi
+
+mkdir -p "$WORKSPACE_PATH"
+
+if compgen -G "$WORKSPACE_PATH/*" >/dev/null; then
+  backup_dir="$WORKSPACE_PATH.backup.$(date +%Y%m%d-%H%M%S)"
+  echo "Backing up existing workspace to: $backup_dir"
+  mkdir -p "$backup_dir"
+  cp -a "$WORKSPACE_PATH"/. "$backup_dir"/
+fi
+
+echo "Copying template workspace files..."
+cp -a "$REPO_ROOT/workspace"/. "$WORKSPACE_PATH"/
+
 USER_FILE="$WORKSPACE_PATH/USER.md"
 IDENTITY_FILE="$WORKSPACE_PATH/IDENTITY.md"
 MEMORY_FILE="$WORKSPACE_PATH/MEMORY.md"
@@ -202,7 +234,9 @@ sed -i "s/{{X_HANDLE}}/$(escape_sed "$X_HANDLE")/g" "$USER_FILE"
 sed -i "s/{{AGENT_NAME}}/$(escape_sed "$NAME")/g" "$IDENTITY_FILE" "$MEMORY_FILE"
 sed -i "s/{{DATE}}/$(date -u +%F)/g" "$MEMORY_FILE"
 
-if [[ "$NON_INTERACTIVE" == false ]]; then
+if [[ "$SKIP_KEYS" == true ]]; then
+  echo "Skipping API key setup (--skip-keys)."
+elif [[ "$NON_INTERACTIVE" == false ]]; then
   configure_api_keys
 fi
 setup_precache

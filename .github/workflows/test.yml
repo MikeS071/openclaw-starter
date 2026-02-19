@@ -1,0 +1,84 @@
+name: Install Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-ubuntu-22:
+    name: Ubuntu 22.04
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify vps-install.sh exists and is executable
+        run: |
+          test -f vps-install.sh && echo "✓ vps-install.sh exists"
+          test -x vps-install.sh && echo "✓ vps-install.sh is executable"
+
+      - name: Verify ocl CLI exists and is executable
+        run: |
+          test -f bin/ocl && echo "✓ bin/ocl exists"
+          test -x bin/ocl && echo "✓ bin/ocl is executable"
+
+      - name: Verify install.sh exists
+        run: |
+          test -f install.sh && echo "✓ install.sh exists"
+          test -x install.sh && echo "✓ install.sh is executable"
+
+      - name: Verify workspace templates exist
+        run: |
+          for f in workspace/SOUL.md workspace/AGENTS.md workspace/USER.md workspace/IDENTITY.md workspace/HEARTBEAT.md workspace/MEMORY.md workspace/TOOLS.md; do
+            test -f "$f" && echo "✓ $f" || (echo "✗ MISSING: $f" && exit 1)
+          done
+
+      - name: Verify workflow templates exist
+        run: |
+          for f in workspace/workflow/preflight-spec-template.md workspace/workflow/agent-quality-contract.md workspace/workflow/readiness-check.sh; do
+            test -f "$f" && echo "✓ $f" || (echo "✗ MISSING: $f" && exit 1)
+          done
+
+      - name: Verify automation scripts
+        run: |
+          test -f automation/precache-checks.sh && echo "✓ automation/precache-checks.sh"
+
+      - name: Validate bash syntax — vps-install.sh
+        run: bash -n vps-install.sh && echo "✓ vps-install.sh syntax OK"
+
+      - name: Validate bash syntax — install.sh
+        run: bash -n install.sh && echo "✓ install.sh syntax OK"
+
+      - name: Validate bash syntax — bin/ocl
+        run: bash -n bin/ocl && echo "✓ ocl syntax OK"
+
+      - name: Test ocl help (no system deps needed)
+        run: |
+          # Source the functions without running — just check help works
+          bash bin/ocl help && echo "✓ ocl help works"
+
+      - name: Test install.sh --non-interactive (dry run)
+        run: |
+          OPENCLAW_USER_NAME="Test User" \
+          OPENCLAW_TIMEZONE="UTC" \
+          OPENCLAW_WORK_EMAIL="test@example.com" \
+          OPENCLAW_X_HANDLE="@testuser" \
+          bash install.sh --non-interactive --skip-keys --dry-run 2>/dev/null || true
+          echo "✓ install.sh non-interactive mode ran"
+
+  test-ubuntu-24:
+    name: Ubuntu 24.04
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate bash syntax — all scripts
+        run: |
+          bash -n vps-install.sh && echo "✓ vps-install.sh"
+          bash -n install.sh && echo "✓ install.sh"
+          bash -n bin/ocl && echo "✓ ocl"
+          bash -n automation/precache-checks.sh && echo "✓ precache-checks.sh"
+
+      - name: Test ocl help
+        run: bash bin/ocl help

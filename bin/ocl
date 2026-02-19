@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# ocl — OpenClaw management CLI
+# Installed to /usr/local/bin/ocl by vps-install.sh
+
+set -euo pipefail
+
+OPENCLAW_USER="${OPENCLAW_USER:-openclaw}"
+VERSION="1.0.0"
+
+usage() {
+  cat <<EOF
+ocl — OpenClaw management CLI v$VERSION
+
+Usage: ocl <command>
+
+Commands:
+  status    Show gateway health and service status
+  logs      Tail gateway logs (last 50 lines)
+  restart   Restart the OpenClaw gateway service
+  backup    Backup OpenClaw config to ~/backups/
+  update    Update OpenClaw to latest version + restart
+  harden    Restrict SSH access to Tailscale interface only
+  persona   Re-run workspace setup wizard
+  help      Show this help message
+
+EOF
+}
+
+cmd_status() {
+  echo "=== OpenClaw Gateway ==="
+  systemctl --user status openclaw --no-pager 2>/dev/null || echo "Service: not found (run as openclaw user)"
+  echo ""
+  echo "=== Gateway Health ==="
+  curl -sf http://127.0.0.1:18789/health 2>/dev/null && echo "" || echo "Gateway: not responding on :18789"
+  echo ""
+  echo "=== Tailscale ==="
+  tailscale status 2>/dev/null | head -5 || echo "Tailscale: not running"
+}
+
+cmd_logs() {
+  journalctl --user -u openclaw -n 50 --no-pager 2>/dev/null || \
+    cat /tmp/openclaw-gateway.log 2>/dev/null || \
+    echo "No logs found. Is openclaw running? Try: ocl status"
+}
+
+cmd_restart() {
+  echo "Restarting OpenClaw gateway..."
+  systemctl --user restart openclaw 2>/dev/null && echo "✓ Restarted" || \
+    (openclaw gateway restart 2>/dev/null && echo "✓ Restarted via CLI") || \
+    echo "✗ Failed — try: systemctl --user status openclaw"
+}
+
+cmd_backup() {
+  BACKUP_DIR="${HOME}/backups"
+  TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+  BACKUP_FILE="$BACKUP_DIR/openclaw-backup-$TIMESTAMP.tar.gz"
+  mkdir -p "$BACKUP_DIR"
+  tar -czf "$BACKUP_FILE" \
+    --exclude='~/.openclaw/cache' \
+    --exclude='~/.openclaw/logs' \
+    ~/.openclaw/ 2>/dev/null
+  echo "✓ Backup saved: $BACKUP_FILE"
+  ls -lh "$BACKUP_FILE"
+}
+
+cmd_update() {
+  echo "Updating OpenClaw..."
+  npm update -g openclaw 2>/dev/null || npm install -g openclaw
+  echo "✓ Updated"
+  ocl restart
+}
+
+cmd_harden() {
+  echo "⚠️  This will restrict SSH to Tailscale only."
+  echo "Make sure Tailscale is connected: tailscale status"
+  read -r -p "Continue? [y/N] " confirm
+  [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+  sudo ufw delete allow 22/tcp 2>/dev/null || true
+  sudo ufw allow in on tailscale0 to any port 22 proto tcp
+  sudo ufw reload
+  echo "✓ SSH now restricted to Tailscale interface."
+  echo "  Verify with: sudo ufw status"
+}
+
+cmd_persona() {
+  STARTER_DIR="${HOME}/openclaw-starter"
+  if [ -d "$STARTER_DIR" ]; then
+    echo "Running persona setup wizard..."
+    bash "$STARTER_DIR/install.sh"
+  else
+    echo "openclaw-starter not found at $STARTER_DIR"
+    echo "Clone it: git clone https://github.com/MikeS071/openclaw-starter $STARTER_DIR"
+  fi
+}
+
+case "${1:-help}" in
+  status)   cmd_status ;;
+  logs)     cmd_logs ;;
+  restart)  cmd_restart ;;
+  backup)   cmd_backup ;;
+  update)   cmd_update ;;
+  harden)   cmd_harden ;;
+  persona)  cmd_persona ;;
+  help|--help|-h) usage ;;
+  version|--version|-v) echo "ocl v$VERSION" ;;
+  *)
+    echo "Unknown command: $1"
+    echo "Run 'ocl help' for usage."
+    exit 1 ;;
+esac

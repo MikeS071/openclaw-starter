@@ -197,8 +197,7 @@ Next steps:
 3) Check service:
    systemctl --user status openclaw
 4) Manage installation:
-   cd ~/openclaw-starter
-   make status
+   ocl status
 
 EOF
 }
@@ -215,6 +214,13 @@ main() {
   clone_repo
   run_persona_install
   setup_systemd_user_service
+
+  # Install ocl CLI
+  echo "▶ Installing ocl CLI..."
+  cp "$REPO_DIR/bin/ocl" /usr/local/bin/ocl
+  chmod +x /usr/local/bin/ocl
+  echo "✓ ocl installed — run 'ocl help' to see commands"
+
   print_summary
 }
 
