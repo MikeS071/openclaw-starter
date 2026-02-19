@@ -89,6 +89,7 @@ install_base_deps() {
   apt-get remove -y nodejs npm 2>/dev/null || true
   apt-get autoremove -y 2>/dev/null || true
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+  wait_for_apt
   apt-get install -y nodejs
 
   log "Installing Go 1.21..."
