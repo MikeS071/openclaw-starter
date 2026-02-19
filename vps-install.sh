@@ -85,8 +85,11 @@ install_base_deps() {
   apt-get install -y ca-certificates curl git jq gnupg pass lsb-release software-properties-common
 
   log "Installing Node.js 22 (NodeSource)..."
+  # Remove system npm/nodejs that conflict with NodeSource packages
+  apt-get remove -y nodejs npm 2>/dev/null || true
+  apt-get autoremove -y 2>/dev/null || true
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-  apt-get install -y nodejs npm
+  apt-get install -y nodejs
 
   log "Installing Go 1.21..."
   if ! apt-get install -y golang-1.21-go; then
