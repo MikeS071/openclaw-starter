@@ -179,7 +179,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/openclaw/.local/bin/openclaw gateway start --foreground
+ExecStart=/home/openclaw/.local/bin/openclaw gateway run
 Restart=always
 RestartSec=10
 Environment=HOME=/home/openclaw

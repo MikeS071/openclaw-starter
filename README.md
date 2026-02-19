@@ -28,6 +28,25 @@ cd openclaw-starter
 bash install.sh
 ```
 
+## First-Time Setup (after install)
+
+Configure OpenClaw with your LLM provider, then start the gateway:
+
+```bash
+# Configure auth (non-interactive, VPS/headless):
+openclaw onboard --non-interactive --accept-risk --auth-choice openai-api-key
+# Or for Anthropic API key:
+# openclaw onboard --non-interactive --accept-risk --auth-choice anthropic
+
+# Start gateway (headless / no D-Bus):
+nohup openclaw gateway run > /tmp/openclaw-gateway.log 2>&1 &
+
+# Test it's working:
+openclaw agent --agent main -m "Say hello"
+```
+
+The gateway runs automatically on reboot via the systemd user service set up by `vps-install.sh`.
+
 ## Managing Your Installation
 
 After install, use the `ocl` CLI:
