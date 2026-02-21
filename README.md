@@ -1,115 +1,44 @@
 # openclaw-starter
 
-> One command to clone a productive AI assistant on a fresh VPS.
+Workspace template used by ArchonHQ provisioning. When a new paid tenant is created, the provisioning service copies `workspace/` from this repo into the tenant's fresh OpenClaw instance so they boot with the current Navi persona, working agreements, and runbook scaffolding.
 
-## Quick Start (Fresh VPS)
+## How provisioning uses this repo
+1. Provisioner clones `openclaw-starter` on the control node.
+2. `workspace/` is synced into the new tenant's `/home/openclaw/.openclaw/workspace/` before the gateway starts.
+3. README + automation assets are referenced for any optional extras (e.g., workflow templates) when enabled.
+4. After copy, the tenant customises `USER.md`, `MEMORY.md`, `TOOLS.md`, and any workflow docs during onboarding.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/MikeS071/openclaw-starter/main/vps-install.sh | sudo bash
-```
-
-Installs OpenClaw + security hardening + your AI persona + workflow templates. ~5 minutes on Ubuntu 22.04/24.04.
-
-## What You Get
-
-- OpenClaw installed and running as a systemd user service
-- UFW firewall + Fail2ban + Tailscale VPN
-- Structured AI persona (`SOUL.md`, `USER.md`, `AGENTS.md`, `IDENTITY.md`)
-- Agentic engineering workflow (pre-flight specs, agent quality contract, readiness checks)
-- Gmail/Calendar pre-cache automation scaffolding
-- Weekly self-improvement cron-friendly templates
-- `ocl` management CLI
-
-## Already Have OpenClaw? (Persona Only)
-
-```bash
-git clone https://github.com/MikeS071/openclaw-starter.git
-cd openclaw-starter
-bash install.sh
-```
-
-## First-Time Setup (after install)
-
-Configure OpenClaw with your LLM provider, then start the gateway:
-
-```bash
-# Configure auth (non-interactive, VPS/headless):
-openclaw onboard --non-interactive --accept-risk --auth-choice openai-api-key
-# Or for Anthropic API key:
-# openclaw onboard --non-interactive --accept-risk --auth-choice anthropic
-
-# Start gateway (headless / no D-Bus):
-nohup openclaw gateway run > /tmp/openclaw-gateway.log 2>&1 &
-
-# Test it's working:
-openclaw agent --agent main -m "Say hello"
-```
-
-The gateway runs automatically on reboot via the systemd user service set up by `vps-install.sh`.
-
-## Managing Your Installation
-
-After install, use the `ocl` CLI:
-
-```bash
-ocl status     # check gateway health
-ocl logs       # view recent logs
-ocl restart    # restart the gateway
-ocl backup     # backup your config
-ocl update     # update to latest OpenClaw
-ocl harden     # restrict SSH to Tailscale only
-ocl persona    # re-run setup wizard
-```
-
-## Local Testing (Docker)
-
-```bash
-cd docker
-docker build -t openclaw-starter-test .
-```
-
-## install.sh flags
-
-```bash
-bash install.sh --non-interactive --skip-keys --dry-run
-```
-
-- `--dry-run`: print what would happen, do not copy files or run setup commands
-- `--skip-keys`: skip API key setup (useful for CI)
+Keep this repo in lockstep with the production Navi workspace. When the main workspace changes, mirror the relevant files here so new tenants inherit the same guardrails and expectations.
 
 ## Structure
 
-```text
-.
-├── .github/
-│   └── workflows/
-│       └── test.yml
-├── bin/
-│   └── ocl
-├── README.md
-├── install.sh
-├── vps-install.sh
-├── automation/
-│   ├── README.md
-│   └── precache-checks.sh
-├── docker/
-│   └── Dockerfile
-└── workspace/
-    ├── AGENTS.md
-    ├── HEARTBEAT.md
-    ├── IDENTITY.md
-    ├── MEMORY.md
-    ├── SOUL.md
-    ├── TOOLS.md
-    ├── USER.md
-    └── workflow/
-        ├── agent-quality-contract.md
-        ├── preflight-spec-template.md
-        └── readiness-check.sh
+```
+openclaw-starter/
+  workspace/
+    AGENTS.md
+    SOUL.md
+    USER.md
+    HEARTBEAT.md
+    TOOLS.md
+    MEMORY.md
+    IDENTITY.md
+  README.md  ← this file
 ```
 
-## Philosophy
+You can add more folders (e.g., `workflow/`, `automation/`) as needed, but the files above are the minimum set provisioned into every tenant.
 
-This project is designed for practical, repeatable agent setup rather than one-off prompt hacking. You install a secure runtime, then layer in a structured persona and explicit working agreements so the assistant behaves consistently across sessions. The focus is less on "magic" and more on dependable operation under real production conditions.
+## Updating the templates
+- Make edits in the production workspace first.
+- Re-run those edits here, keeping user-specific secrets out of the template.
+- Document any required manual steps inside the files themselves.
+- When ready, push to the provisioning repo and notify Ops so the next tenant pick-up includes the change.
 
-The workflow is inspired by BMAD-style agentic engineering: define intent before execution, use quality contracts to constrain behavior, and run readiness checks before shipping changes. That gives you a system that is easier to audit, easier to iterate, and less likely to drift as your assistant grows in capability.
+## Manual use (local install)
+If you already have OpenClaw running and just want the latest persona files:
+
+```bash
+git clone https://github.com/MikeS071/openclaw-starter.git
+cp -R openclaw-starter/workspace/* /home/openclaw/.openclaw/workspace/
+```
+
+Review each file after copying and fill in the placeholders before restarting your agent.
