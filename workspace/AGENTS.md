@@ -32,3 +32,4 @@
 ## Tools
 - Skills: check `SKILL.md` for each. Notes in `TOOLS.md`.
 - Formatting: no markdown tables in Discord/WhatsApp; no headers in WhatsApp.
+- **Template sync rule:** when making generic workspace improvements (hooks, scripts, AGENTS.md, SOUL.md), push to the public starter template in the same session. Keep templates in sync.
