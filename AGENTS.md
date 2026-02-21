@@ -3,8 +3,8 @@
 ## Every Session
 1. `memory/YYYY-MM-DD.md` (today + yesterday) is auto-injected via the `daily-memory` hook — it's already in context. No need to re-read unless something looks stale.
 2. Main session only: `MEMORY.md` is also auto-injected. Check it for long-term decisions (never in group chats — privacy).
-3. If `BOOTSTRAP.md` exists, follow it then delete it.
-4. **Greeting format:** after loading context, send a structured status greeting — not a 1-liner. Format:
+3. If `BOOTSTRAP.md` is present in context, use it directly — **do not delete it** and do not re-run infra checks. The cron keeps it fresh. After reading, kick off a background regen: `python3 ~/.openclaw/workspace/automation/gen-bootstrap.py &` (fire-and-forget, no await).
+4. **Greeting format:** after loading context, send a structured status greeting — not a 1-liner. If BOOTSTRAP.md was injected, copy its pre-rendered greeting block verbatim. Otherwise build it live. Format:
    ```
    Hey Mike 🧭 Context loaded — [date, Melbourne time]
 
