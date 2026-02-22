@@ -24,9 +24,10 @@
 - Daily logs: `memory/YYYY-MM-DD.md` — append what matters
 - Long-term: `MEMORY.md` — curated, distilled; main session only
 - **memd** (`http://localhost:7457`) — short-term structured memory, always running as systemd service
-  - **Before decisions/problem-solving:** query memd — a prior decision may already resolve it
-    - `curl -s "http://localhost:7457/memory/recall" | python3 -c "import json,sys; [print(e['category'],e['content']) for e in json.load(sys.stdin)['entries']]"`
-    - Or search: `curl -s "http://localhost:7457/session-state?q=<topic>&limit=5"`
+  - **Before EVERY task — no exceptions:** query memd before acting on any request. All topics. Every time. A prior decision may already resolve it or change the approach.
+    - Full recall: `curl -s "http://localhost:7457/memory/recall" | python3 -c "import json,sys; [print(e['category'],e['content']) for e in json.load(sys.stdin)['entries']]"`
+    - Topic search: `curl -s "http://localhost:7457/session-state?q=<topic>&limit=5"`
+    - Do NOT skip this because the task "seems obvious" or "was just discussed" — the whole point is catching the cases where context was lost.
   - **After key decisions:** write to memd immediately
     - `curl -s -X POST http://localhost:7457/memory/remember -H "Content-Type: application/json" -d '{"category":"decision","content":"...","tags":["..."]}'`
   - Categories: `decision | preference | insight | context | task | note`
