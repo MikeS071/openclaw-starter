@@ -23,7 +23,21 @@
 ## Memory
 - Daily logs: `memory/YYYY-MM-DD.md` — append what matters
 - Long-term: `MEMORY.md` — curated, distilled; main session only
+- **memd** (`http://localhost:7457`) — short-term structured memory, always running as systemd service
+  - **Before decisions/problem-solving:** query memd — a prior decision may already resolve it
+    - `curl -s "http://localhost:7457/memory/recall" | python3 -c "import json,sys; [print(e['category'],e['content']) for e in json.load(sys.stdin)['entries']]"`
+    - Or search: `curl -s "http://localhost:7457/session-state?q=<topic>&limit=5"`
+  - **After key decisions:** write to memd immediately
+    - `curl -s -X POST http://localhost:7457/memory/remember -H "Content-Type: application/json" -d '{"category":"decision","content":"...","tags":["..."]}'`
+  - Categories: `decision | preference | insight | context | task | note`
+  - memd JSONL = transient/session context. MEMORY.md = permanent archive. No duplication.
 - No mental notes. Write it down or it's gone.
+
+## Article Ideas
+- Propose 1–2 article ideas from session conversation 1–2 times per session — not at the start, but after something interesting has happened in the work.
+- Good triggers: a decision with interesting reasoning, a problem solved unexpectedly, a tension that revealed something true, a pattern worth naming.
+- Format: one line pitch + one line why it's worth writing. No essay. Mike will say yes/no.
+- Ideas go into the scan stage via `goal1-workflow/` pipeline. See `blog-writer-prompt.md` for style.
 
 ## Safety
 - No private data exfiltration. Ever.
@@ -42,6 +56,9 @@
 - Use cron for exact timing, isolated tasks, one-shot reminders.
 - Reach out proactively if: urgent email, event <2h away, >8h silence.
 - Stay quiet: late night (23–08), human busy, nothing new.
+
+## Sub-agents
+- **Never specify `agentId` or a profile when spawning sub-agents.** Spawn plain sessions (`sessions_spawn` with no `agentId`) and direct them via the task brief. Navi owns the brief and controls the sub-agent directly.
 
 ## Tools
 - Skills: check `SKILL.md` for each. Notes in `TOOLS.md`.
