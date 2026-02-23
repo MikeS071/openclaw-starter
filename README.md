@@ -22,10 +22,29 @@ openclaw-starter/
     TOOLS.md
     MEMORY.md
     IDENTITY.md
+    WORKFLOW_AUTO.md              # approval boundaries + autonomous rules
+
+    workflow/                      # canonical process + templates
+      README.md
+      agent-quality-contract.md
+      preflight-spec-template.md
+      agents/
+      templates/
+      specs/
+      prd/
+        _template.md
+
+    automation/
+      gen-bootstrap.py
+
+    hooks/
+      daily-memory/
+
   README.md  ← this file
 ```
 
-You can add more folders (e.g., `workflow/`, `automation/`) as needed, but the files above are the minimum set provisioned into every tenant.
+New tenants inherit the full workflow system under `workspace/workflow/`.
+PRDs belong in `workspace/workflow/prd/` using slug filenames.
 
 ## Updating the templates
 - Make edits in the production workspace first.
