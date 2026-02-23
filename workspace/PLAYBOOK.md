@@ -34,6 +34,12 @@
 - Always create/checkout a feature branch (`git checkout -b feat/...`).
 - Never push directly to `main`. Open PRs for review.
 
+**memd (workspace memory sidecar)**
+- Health: `curl -s http://localhost:7457/health`
+- Recall: `curl -s http://localhost:7457/memory/recall | python3 -c "import json,sys; [print(e['category'],e['content']) for e in json.load(sys.stdin)['entries']]"`
+- Topic search:
+  `curl -s "http://localhost:7457/session-state?q=<topic>&limit=5" | python3 -c "import json,sys; d=json.load(sys.stdin); [print(f\"#{r['rank']} {r['path']}\n  {r['snippet']}\n\") for r in d.get('results',[])]"`
+
 **Memory Update Flow**
 1. `memory_search` for relevant terms.
 2. `memory_get` to read the file before editing.
