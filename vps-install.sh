@@ -159,7 +159,13 @@ run_persona_install() {
   if [[ -t 0 && -t 1 ]]; then
     sudo -u "$OPENCLAW_USER" bash -lc "cd '$REPO_DIR' && bash install.sh"
   else
-    sudo -u "$OPENCLAW_USER" bash -lc "cd '$REPO_DIR' && OPENCLAW_USER_NAME='OpenClaw User' OPENCLAW_TIMEZONE='UTC' OPENCLAW_WORK_EMAIL='' OPENCLAW_X_HANDLE='' bash install.sh --non-interactive"
+    sudo -u "$OPENCLAW_USER" env \
+      OPENCLAW_USER_NAME="${OPENCLAW_USER_NAME:-OpenClaw User}" \
+      OPENCLAW_TIMEZONE="${OPENCLAW_TIMEZONE:-UTC}" \
+      OPENCLAW_WORK_EMAIL="${OPENCLAW_WORK_EMAIL:-}" \
+      OPENCLAW_PERSONAL_EMAIL="${OPENCLAW_PERSONAL_EMAIL:-}" \
+      OPENCLAW_X_HANDLE="${OPENCLAW_X_HANDLE:-}" \
+      bash -lc "cd '$REPO_DIR' && bash install.sh --non-interactive"
   fi
 }
 
@@ -239,6 +245,10 @@ main() {
   install_openclaw_cli
   clone_repo
   run_persona_install
+
+  log "Initializing OpenClaw config..."
+  sudo -H -u "$OPENCLAW_USER" bash -lc "openclaw setup --non-interactive --mode local --workspace /home/openclaw/.openclaw/workspace"
+
   setup_systemd_user_service
 
   # Install ocl CLI

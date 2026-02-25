@@ -225,14 +225,32 @@ IDENTITY_FILE="$WORKSPACE_PATH/IDENTITY.md"
 MEMORY_FILE="$WORKSPACE_PATH/MEMORY.md"
 TOOLS_FILE="$WORKSPACE_PATH/TOOLS.md"
 
-sed -i "s/{{NAME}}/$(escape_sed "$NAME")/g" "$USER_FILE" "$MEMORY_FILE"
-sed -i "s/{{PREFERRED_NAME}}/$(escape_sed "$PREFERRED_NAME")/g" "$USER_FILE"
-sed -i "s/{{TIMEZONE}}/$(escape_sed "$TIMEZONE")/g" "$USER_FILE" "$MEMORY_FILE" "$TOOLS_FILE"
-sed -i "s/{{WORK_EMAIL}}/$(escape_sed "$WORK_EMAIL")/g" "$USER_FILE"
-sed -i "s/{{PERSONAL_EMAIL}}/$(escape_sed "$PERSONAL_EMAIL")/g" "$USER_FILE"
-sed -i "s/{{X_HANDLE}}/$(escape_sed "$X_HANDLE")/g" "$USER_FILE"
-sed -i "s/{{AGENT_NAME}}/$(escape_sed "$NAME")/g" "$IDENTITY_FILE" "$MEMORY_FILE"
-sed -i "s/{{DATE}}/$(date -u +%F)/g" "$MEMORY_FILE"
+HOSTNAME_VAL="$(hostname)"
+DATE_VAL="$(date -u +%F)"
+AGENT_NAME_VAL="${OPENCLAW_AGENT_NAME:-Navi}"
+SHORT_DESCRIPTION_VAL="${OPENCLAW_SHORT_DESCRIPTION:-OpenClaw companion}"
+
+SOCIAL_LINKS_VAL=""
+if [[ -n "${X_HANDLE:-}" ]]; then
+  SOCIAL_LINKS_VAL="@${X_HANDLE}"
+fi
+
+# Back-compat placeholders (older templates)
+sed -i "s/{{NAME}}/$(escape_sed "$NAME")/g" "$USER_FILE" "$MEMORY_FILE" || true
+sed -i "s/{{TIMEZONE}}/$(escape_sed "$TIMEZONE")/g" "$USER_FILE" "$MEMORY_FILE" "$TOOLS_FILE" || true
+
+# Current template placeholders
+sed -i "s/{{USER_NAME}}/$(escape_sed "$NAME")/g" "$USER_FILE" "$MEMORY_FILE"
+sed -i "s/{{USER_TIMEZONE}}/$(escape_sed "$TIMEZONE")/g" "$USER_FILE" "$MEMORY_FILE" "$TOOLS_FILE"
+sed -i "s/{{HOSTNAME}}/$(escape_sed "$HOSTNAME_VAL")/g" "$TOOLS_FILE" || true
+
+sed -i "s/{{AGENT_NAME}}/$(escape_sed "$AGENT_NAME_VAL")/g" "$MEMORY_FILE" || true
+sed -i "s/{{SHORT_DESCRIPTION}}/$(escape_sed "$SHORT_DESCRIPTION_VAL")/g" "$MEMORY_FILE" || true
+sed -i "s/{{WORK_EMAIL}}/$(escape_sed "$WORK_EMAIL")/g" "$MEMORY_FILE" || true
+sed -i "s/{{PERSONAL_EMAIL}}/$(escape_sed "$PERSONAL_EMAIL")/g" "$MEMORY_FILE" || true
+sed -i "s/{{SOCIAL_LINKS}}/$(escape_sed "$SOCIAL_LINKS_VAL")/g" "$MEMORY_FILE" || true
+sed -i "s/{{DATE}}/$(escape_sed "$DATE_VAL")/g" "$MEMORY_FILE" || true
+
 
 if [[ "$SKIP_KEYS" == true ]]; then
   echo "Skipping API key setup (--skip-keys)."
