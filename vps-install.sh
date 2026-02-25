@@ -1,11 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-# openclaw-starter VPS bootstrap
-# Usage: curl -fsSL https://raw.githubusercontent.com/MikeS071/openclaw-starter/main/vps-install.sh | sudo bash
+# openclaw-starter (public) — vanilla OpenClaw VPS bootstrap
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/MikeS071/openclaw-starter/main/vps-install.sh | sudo bash
 
-REPO_URL="https://github.com/MikeS071/openclaw-starter.git"
-REPO_DIR="/home/openclaw/openclaw-starter"
 OPENCLAW_USER="openclaw"
 
 log() {
@@ -58,8 +57,7 @@ EOF
 }
 
 wait_for_apt() {
-  log "Waiting for apt lock to be released (cloud-init may be running)..."
-  # Stop unattended-upgrades if running, then wait for lock
+  log "Waiting for apt lock (cloud-init may be running)..."
   systemctl stop unattended-upgrades 2>/dev/null || true
   systemctl stop apt-daily.service apt-daily-upgrade.service 2>/dev/null || true
   local waited=0
@@ -68,11 +66,9 @@ wait_for_apt() {
       log "Timed out waiting for apt lock after 120s — proceeding anyway"
       break
     fi
-    log "  apt lock held, waiting 5s... (${waited}s elapsed)"
     sleep 5
     waited=$((waited + 5))
   done
-  # Extra safety — wait for dpkg lock too
   while flock --nonblock /var/lib/dpkg/lock true 2>/dev/null; [ $? -ne 0 ]; do
     sleep 3
   done
@@ -85,18 +81,11 @@ install_base_deps() {
   apt-get install -y ca-certificates curl git jq gnupg pass lsb-release software-properties-common
 
   log "Installing Node.js 22 (NodeSource)..."
-  # Remove system npm/nodejs that conflict with NodeSource packages
   apt-get remove -y nodejs npm 2>/dev/null || true
   apt-get autoremove -y 2>/dev/null || true
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   wait_for_apt
   apt-get install -y nodejs
-
-  log "Installing Go 1.21..."
-  if ! apt-get install -y golang-1.21-go; then
-    log "golang-1.21-go not available, falling back to golang-go"
-    apt-get install -y golang-go
-  fi
 }
 
 configure_ufw() {
@@ -127,16 +116,10 @@ EOF
   systemctl restart fail2ban
 }
 
-install_tailscale() {
-  log "Installing Tailscale..."
-  curl -fsSL https://tailscale.com/install.sh | sh
-  systemctl enable --now tailscaled
-}
-
 install_openclaw_cli() {
   log "Installing OpenClaw CLI as $OPENCLAW_USER..."
-  sudo -u "$OPENCLAW_USER" bash -lc 'npm config set prefix "$HOME/.local"'
-  sudo -u "$OPENCLAW_USER" bash -lc 'npm install -g openclaw'
+  sudo -H -u "$OPENCLAW_USER" bash -lc 'npm config set prefix "$HOME/.local"'
+  sudo -H -u "$OPENCLAW_USER" bash -lc 'npm install -g openclaw'
 
   PROFILE_FILE="/home/${OPENCLAW_USER}/.profile"
   if ! grep -q 'HOME/.local/bin' "$PROFILE_FILE" 2>/dev/null; then
@@ -144,29 +127,9 @@ install_openclaw_cli() {
   fi
 }
 
-clone_repo() {
-  log "Cloning openclaw-starter repo into $REPO_DIR..."
-  if [[ -d "$REPO_DIR/.git" ]]; then
-    sudo -u "$OPENCLAW_USER" git -C "$REPO_DIR" pull --ff-only
-  else
-    sudo -u "$OPENCLAW_USER" git clone "$REPO_URL" "$REPO_DIR"
-  fi
-}
-
-run_persona_install() {
-  log "Running openclaw-starter installer..."
-
-  if [[ -t 0 && -t 1 ]]; then
-    sudo -u "$OPENCLAW_USER" bash -lc "cd '$REPO_DIR' && bash install.sh"
-  else
-    sudo -u "$OPENCLAW_USER" env \
-      OPENCLAW_USER_NAME="${OPENCLAW_USER_NAME:-OpenClaw User}" \
-      OPENCLAW_TIMEZONE="${OPENCLAW_TIMEZONE:-UTC}" \
-      OPENCLAW_WORK_EMAIL="${OPENCLAW_WORK_EMAIL:-}" \
-      OPENCLAW_PERSONAL_EMAIL="${OPENCLAW_PERSONAL_EMAIL:-}" \
-      OPENCLAW_X_HANDLE="${OPENCLAW_X_HANDLE:-}" \
-      bash -lc "cd '$REPO_DIR' && bash install.sh --non-interactive"
-  fi
+init_openclaw() {
+  log "Initializing OpenClaw (vanilla)..."
+  sudo -H -u "$OPENCLAW_USER" bash -lc 'openclaw setup --non-interactive --mode local --workspace /home/openclaw/.openclaw/workspace'
 }
 
 setup_systemd_user_service() {
@@ -209,27 +172,15 @@ EOF
 print_summary() {
   cat <<EOF
 
-✅ OpenClaw VPS bootstrap complete.
-
-Installed:
-- System dependencies (git, curl, jq, gpg, pass, nodejs, npm, go)
-- UFW firewall (SSH allowed, incoming denied by default)
-- Fail2ban (SSH: 3 retries, 1h ban)
-- Tailscale (tailscaled service enabled)
-- OpenClaw CLI for user '$OPENCLAW_USER'
-- openclaw-starter repo at: $REPO_DIR
-- Persona/workflow templates via install.sh
-- systemd user service: openclaw
+✅ OpenClaw vanilla bootstrap complete.
 
 Next steps:
-1) Connect Tailscale:
-   sudo tailscale up
-2) Switch to openclaw user:
+1) Switch to openclaw user:
    sudo -iu openclaw
-3) Check service:
+2) Check service:
    systemctl --user status openclaw
-4) Manage installation:
-   ocl status
+3) Open dashboard:
+   openclaw dashboard
 
 EOF
 }
@@ -241,22 +192,9 @@ main() {
   install_base_deps
   configure_ufw
   configure_fail2ban
-  install_tailscale
   install_openclaw_cli
-  clone_repo
-  run_persona_install
-
-  log "Initializing OpenClaw config..."
-  sudo -H -u "$OPENCLAW_USER" bash -lc "openclaw setup --non-interactive --mode local --workspace /home/openclaw/.openclaw/workspace"
-
+  init_openclaw
   setup_systemd_user_service
-
-  # Install ocl CLI
-  echo "▶ Installing ocl CLI..."
-  cp "$REPO_DIR/bin/ocl" /usr/local/bin/ocl
-  chmod +x /usr/local/bin/ocl
-  echo "✓ ocl installed — run 'ocl help' to see commands"
-
   print_summary
 }
 

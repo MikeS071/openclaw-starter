@@ -1,63 +1,24 @@
-# openclaw-starter
+# openclaw-starter (public)
 
-Workspace template used by ArchonHQ provisioning. When a new paid tenant is created, the provisioning service copies `workspace/` from this repo into the tenant's fresh OpenClaw instance so they boot with the current Navi persona, working agreements, and runbook scaffolding.
+Public, minimal bootstrap for a **vanilla OpenClaw** instance.
 
-## How provisioning uses this repo
-1. Provisioner clones `openclaw-starter` on the control node.
-2. `workspace/` is synced into the new tenant's `/home/openclaw/.openclaw/workspace/` before the gateway starts.
-3. README + automation assets are referenced for any optional extras (e.g., workflow templates) when enabled.
-4. After copy, the tenant customises `USER.md`, `MEMORY.md`, `TOOLS.md`, and any workflow docs during onboarding.
+This repo intentionally does **not** ship ArchonHQ persona/workflow templates.
+Mission Control provisioning uses a separate **private** starter repo.
 
-Keep this repo in lockstep with the production Navi workspace. When the main workspace changes, mirror the relevant files here so new tenants inherit the same guardrails and expectations.
-
-## Structure
-
-```
-openclaw-starter/
-  workspace/
-    AGENTS.md
-    SOUL.md
-    USER.md
-    HEARTBEAT.md
-    TOOLS.md
-    MEMORY.md
-    IDENTITY.md
-    WORKFLOW_AUTO.md              # approval boundaries + autonomous rules
-
-    workflow/                      # canonical process + templates
-      README.md
-      agent-quality-contract.md
-      preflight-spec-template.md
-      agents/
-      templates/
-      specs/
-      prd/
-        _template.md
-
-    automation/
-      gen-bootstrap.py
-
-    hooks/
-      daily-memory/
-
-  README.md  ← this file
-```
-
-New tenants inherit the full workflow system under `workspace/workflow/`.
-PRDs belong in `workspace/workflow/prd/` using slug filenames.
-
-## Updating the templates
-- Make edits in the production workspace first.
-- Re-run those edits here, keeping user-specific secrets out of the template.
-- Document any required manual steps inside the files themselves.
-- When ready, push to the provisioning repo and notify Ops so the next tenant pick-up includes the change.
-
-## Manual use (local install)
-If you already have OpenClaw running and just want the latest persona files:
+## VPS install (Ubuntu 22.04 / 24.04)
 
 ```bash
-git clone https://github.com/MikeS071/openclaw-starter.git
-cp -R openclaw-starter/workspace/* /home/openclaw/.openclaw/workspace/
+curl -fsSL https://raw.githubusercontent.com/MikeS071/openclaw-starter/main/vps-install.sh | sudo bash
 ```
 
-Review each file after copying and fill in the placeholders before restarting your agent.
+What it does:
+- creates an `openclaw` user (passwordless sudo)
+- installs Node.js 22 + OpenClaw CLI
+- runs `openclaw setup --non-interactive`
+- installs a systemd user service to keep `openclaw gateway` running
+
+## Local install (optional)
+
+```bash
+bash install.sh
+```
